@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: bartek
+  labels:
+    app: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: bglowacki/workshop-api:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POSTGRES_USER
+              value: myuser
+            - name: POSTGRES_PASSWORD
+              value: mypassword
+            - name: POSTGRES_DB
+              value: workshop
+            - name: POSTGRES_HOST
+              value: postgresql.bartek.svc.cluster.local
+            - name: ELB_HOST
+              value: a9e4939c6f4c511e992ff0af85063012-627040138.us-east-1.elb.amazonaws.com
+            - name: NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace

@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+  namespace: bartek
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: db-migrate
+          image: bglowacki/workshop-api
+          command:
+            - bundle
+            - exec
+            - rails
+            - db:migrate
+          env:
+            - name: POSTGRES_USER
+              value: myuser
+            - name: POSTGRES_PASSWORD
+              value: mypassword
+            - name: POSTGRES_DB
+              value: workshop
+            - name: POSTGRES_HOST
+              value: postgresql.bartek.svc.cluster.local

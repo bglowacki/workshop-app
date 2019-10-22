@@ -1,0 +1,17 @@
+---
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: workshop
+  region: us-east-1
+  version: "1.14"
+
+nodeGroups:
+  - name: workshop-nodes
+    instanceType: c5.4xlarge
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 1
+    volumeSize: 100
+availabilityZones: ["us-east-1a", "us-east-1b", "us-east-1c"]
+
