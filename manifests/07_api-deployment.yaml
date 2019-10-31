@@ -6,7 +6,12 @@ metadata:
   labels:
     app: api
 spec:
-  replicas: 1
+  replicas: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 50%
+      maxUnavailable: 50%
   selector:
     matchLabels:
       app: api
@@ -15,9 +20,26 @@ spec:
       labels:
         app: api
     spec:
+      initContainers:
+        - name: api-migration
+          image: bglowacki/workshop-api:c16e397
+          env:
+            - name: POSTGRES_USER
+              value: myuser
+            - name: POSTGRES_PASSWORD
+              value: mypassword
+            - name: POSTGRES_DB
+              value: workshop
+            - name: POSTGRES_HOST
+              value: postgresql.bartek.svc.cluster.local
+          command:
+            - bundle
+            - exec
+            - rake
+            - db:migrate
       containers:
         - name: api
-          image: bglowacki/workshop-api:latest
+          image: bglowacki/workshop-api:c16e397
           ports:
             - containerPort: 3000
           env:
