@@ -1,3 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wait-for-other-migrations
+  namespace: bartek
+data:
+  test.sh: |
+    #!/bin/sh
+
+    set -eu
+    count=$(psql -t "postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST/$POSTGRES_DB" -c "SELECT count(*) from pg_locks where locktype='advisory'")
+    echo $count
+
+    until [ "$count" -lt 1 ]
+    do
+      echo "$count"
+      echo "Still waiting"
+      sleep 3
+      count=$(psql -t "postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST/$POSTGRES_DB" -c "SELECT count(*) from pg_locks where locktype='advisory'")
+    done
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,12 +28,12 @@ metadata:
   labels:
     app: api
 spec:
-  replicas: 10
+  replicas: 5
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 50%
-      maxUnavailable: 50%
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: api
@@ -20,7 +42,33 @@ spec:
       labels:
         app: api
     spec:
+      volumes:
+        - name: test-script
+          configMap:
+            name: wait-for-other-migrations
+            defaultMode: 0777
       initContainers:
+        - name: wait-for-other-migrations
+          image: postgres
+          volumeMounts:
+            - mountPath: /tmp/test.sh
+              name: test-script
+              subPath: test.sh
+          command:
+            - /tmp/test.sh
+          env:
+            - name: ZOO_MY_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['spec.pod.beta.kubernetes.io/statefulset-index']
+            - name: POSTGRES_USER
+              value: myuser
+            - name: POSTGRES_PASSWORD
+              value: mypassword
+            - name: POSTGRES_DB
+              value: workshop
+            - name: POSTGRES_HOST
+              value: postgresql.bartek.svc.cluster.local
         - name: api-migration
           image: bglowacki/workshop-api:c16e397
           env:
